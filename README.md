@@ -9,6 +9,6 @@
 内容说明：本仓库只放索引和我自己写的精简概括，不全文转载来源站的日报。
 原文版权归 AGI HUNT 所有，每页都附原文链接，详情请看原文。
 
-- 来源站：https://agihunt.info/daily/
+- 来源站：[AGI HUNT 日报归档](https://agihunt.info/daily/)
 - 每页：`daily/YYYY-MM-DD.md`
 - 汇总：`log.md`
