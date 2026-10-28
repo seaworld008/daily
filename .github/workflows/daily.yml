@@ -1,0 +1,67 @@
+name: Daily AI digest index
+
+on:
+  # 01:00 / 05:00 / 13:00 UTC = 09:00 / 13:00 / 21:00 Asia/Shanghai.
+  # 09:00 creates today's placeholder so the day is never empty.
+  # 13:00 and 21:00 catch up on issues that were published late,
+  # and the loop below also re-checks the previous two days.
+  schedule:
+    - cron: "0 1,5,13 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Create placeholders and link newly published issues
+        run: |
+          set -euo pipefail
+          touch log.md
+          for OFFSET in 0 1 2; do
+            D="$(TZ=Asia/Shanghai date -d "-${OFFSET} days" +%F)"
+            FILE="daily/${D}.md"
+            mkdir -p daily
+            if [ ! -f "${FILE}" ]; then
+              {
+                echo "# AI 资讯日报 · ${D}"
+                echo ""
+                echo "- 来源：AGI HUNT（https://agihunt.info/daily/${D}）"
+                echo "- 状态：待更新"
+                echo ""
+                echo "本页为索引占位：该期暂未在来源站看到，或尚未到核查时间。"
+                echo "来源站出刊后，本工作流会在当天 13:00 / 21:00 的核查中把状态改为已出并挂上原文链接；"
+                echo "即使来源站当天断更，本页和当天的提交也不会缺。"
+              } > "${FILE}"
+            fi
+            if grep -qx -- "- 状态：待更新" "${FILE}"; then
+              if curl -fsSL -o /dev/null "https://agihunt.info/daily/${D}"; then
+                sed -i 's/^- 状态：待更新$/- 状态：已出，详情见原文链接/' "${FILE}"
+              fi
+            fi
+            if ! grep -qx -- "- ${D}" log.md; then
+              printf -- '- %s\n' "${D}" >> log.md
+            fi
+          done
+
+      - name: Commit and push as the repo owner
+        run: |
+          set -euo pipefail
+          # The commit must be authored by the account owner, not by
+          # github-actions[bot], otherwise GitHub does not count it
+          # toward the owner's contribution graph.
+          git config user.name "seaworld008"
+          git config user.email "70318946+seaworld008@users.noreply.github.com"
+          git add daily log.md
+          if git diff --cached --quiet; then
+            echo "Nothing new, skipping commit."
+            exit 0
+          fi
+          TODAY="$(TZ=Asia/Shanghai date +%F)"
+          git commit -m "daily: ${TODAY}"
+          git push
