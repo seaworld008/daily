@@ -48,6 +48,13 @@ jobs:
               printf -- '- %s\n' "${D}" >> log.md
             fi
           done
+          # Heartbeat: GitHub counts contributions by UTC date, not
+          # Beijing date. If today's Beijing page was already created
+          # by an earlier run, a run with no file change would skip
+          # committing and leave that UTC day empty. Updating this
+          # file on every run guarantees one commit per run, in the
+          # run's own UTC day.
+          printf 'Last check: %s UTC / %s Beijing\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(TZ=Asia/Shanghai date +%Y-%m-%dT%H:%M:%S)" > heartbeat.md
 
       - name: Commit and push as the repo owner
         run: |
@@ -57,7 +64,7 @@ jobs:
           # toward the owner's contribution graph.
           git config user.name "seaworld008"
           git config user.email "70318946+seaworld008@users.noreply.github.com"
-          git add daily log.md
+          git add daily log.md heartbeat.md
           if git diff --cached --quiet; then
             echo "Nothing new, skipping commit."
             exit 0
